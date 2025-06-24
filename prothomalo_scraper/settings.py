@@ -120,7 +120,7 @@ CELERY_TIMEZONE = TIME_ZONE
 # Elasticsearch settings
 ELASTICSEARCH_DSL = {
     'default': {
-        'hosts': 'localhost:9200',
+        'hosts': 'http://localhost:9200',
         'basic_auth': ('elastic', 'JvQhvZYl'),
         'verify_certs': False,
     },

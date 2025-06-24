@@ -37,6 +37,7 @@ class Article(models.Model):
     """Model to store basic article metadata in Django database"""
     url = models.URLField(unique=True, db_index=True)
     headline = models.TextField()
+    content = models.TextField()  # or CharField if short
     author = models.CharField(max_length=255, blank=True)
     location = models.CharField(max_length=255, blank=True)
     published_at = models.DateTimeField(null=True, blank=True)
