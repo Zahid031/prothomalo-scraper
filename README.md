@@ -1,73 +1,215 @@
-# Welcome to your Lovable project
 
-## Project info
+# Prothom Alo News Scraper Backend
 
-**URL**: https://lovable.dev/projects/61ff7b60-46d1-4c14-aa37-92f6445de0a1
+A robust Django REST Framework backend for scraping news articles from Prothom Alo with Celery task queue, Redis, and Elasticsearch integration.
 
-## How can I edit this code?
+## Features
 
-There are several ways of editing your application.
+- **REST API**: Complete API for managing scraping tasks and accessing data
+- **Async Processing**: Celery task queue for non-blocking scraping operations
+- **Search Engine**: Elasticsearch integration for full-text search
+- **Task Monitoring**: Real-time task status tracking
+- **Multi-Category Support**: Scrape different news categories
+- **Data Storage**: Dual storage in Django database and Elasticsearch
+- **Admin Interface**: Django admin for data management
 
-**Use Lovable**
+## Quick Start
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/61ff7b60-46d1-4c14-aa37-92f6445de0a1) and start prompting.
+### Prerequisites
 
-Changes made via Lovable will be committed automatically to this repo.
+- Python 3.8+
+- Docker and Docker Compose (for Redis and Elasticsearch)
 
-**Use your preferred IDE**
+### Installation
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+1. **Install Dependencies**
+```bash
+pip install -r requirements.txt
 ```
 
-**Edit a file directly in GitHub**
+2. **Start Services**
+```bash
+# Start Redis and Elasticsearch
+docker-compose up -d
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+# Wait for services to be ready (about 30 seconds)
+```
 
-**Use GitHub Codespaces**
+3. **Django Setup**
+```bash
+# Run migrations
+python manage.py makemigrations
+python manage.py migrate
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+# Create superuser (optional)
+python manage.py createsuperuser
 
-## What technologies are used for this project?
+# Start Django development server
+python manage.py runserver
+```
 
-This project is built with:
+4. **Start Celery Worker**
+```bash
+# In a new terminal
+celery -A prothomalo_scraper worker --loglevel=info
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## API Endpoints
 
-## How can I deploy this project?
+### Start Scraping
+```http
+POST /api/scrape/start/
+Content-Type: application/json
 
-Simply open [Lovable](https://lovable.dev/projects/61ff7b60-46d1-4c14-aa37-92f6445de0a1) and click on Share -> Publish.
+{
+    "category": "politics",
+    "max_pages": 2
+}
+```
 
-## Can I connect a custom domain to my Lovable project?
+**Supported Categories**: politics, bangladesh, world, sports, entertainment, business, science-technology, lifestyle, opinion
 
-Yes, you can!
+### Monitor Task Status
+```http
+GET /api/tasks/{task_id}/status/
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### List All Tasks
+```http
+GET /api/tasks/
+GET /api/tasks/?category=politics&status=SUCCESS
+```
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+### List Articles
+```http
+GET /api/articles/
+GET /api/articles/?category=politics
+```
+
+### Search Articles (Elasticsearch)
+```http
+GET /api/articles/search/?q=আওয়ামী&category=politics&page=1&size=20
+```
+
+### Get Statistics
+```http
+GET /api/stats/
+```
+
+## Usage Examples
+
+### 1. Start a Scraping Task
+```bash
+curl -X POST http://localhost:8000/api/scrape/start/ \
+  -H "Content-Type: application/json" \
+  -d '{"category": "politics", "max_pages": 3}'
+```
+
+Response:
+```json
+{
+    "success": true,
+    "task_id": "abc123-def456-ghi789",
+    "category": "politics",
+    "max_pages": 3,
+    "status": "PENDING",
+    "message": "Scraping task started for category \"politics\""
+}
+```
+
+### 2. Check Task Status
+```bash
+curl http://localhost:8000/api/tasks/abc123-def456-ghi789/status/
+```
+
+Response:
+```json
+{
+    "task_id": "abc123-def456-ghi789",
+    "category": "politics",
+    "status": "SUCCESS",
+    "total_articles_found": 36,
+    "articles_scraped": 34,
+    "articles_indexed": 34,
+    "created_at": "2025-01-20T10:00:00Z",
+    "completed_at": "2025-01-20T10:05:30Z"
+}
+```
+
+### 3. Search Articles
+```bash
+curl "http://localhost:8000/api/articles/search/?q=নির্বাচন&category=politics"
+```
+
+## Architecture
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Django API    │    │  Celery Worker  │    │ Elasticsearch   │
+│                 │    │                 │    │                 │
+│ • REST endpoints│    │ • Scraping tasks│    │ • Article search│
+│ • Task tracking │    │ • Data processing│   │ • Full-text idx │
+│ • Admin interface│   │ • Error handling│    │ • Analytics     │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         └───────────────────────┼───────────────────────┘
+                                 │
+                    ┌─────────────────┐
+                    │     Redis       │
+                    │                 │
+                    │ • Task queue    │
+                    │ • Result store  │
+                    │ • Caching       │
+                    └─────────────────┘
+```
+
+## Development
+
+### Running Tests
+```bash
+python manage.py test
+```
+
+### Monitoring Celery
+```bash
+# Monitor Celery tasks
+celery -A prothomalo_scraper flower
+# Access at http://localhost:5555
+```
+
+### Django Admin
+Access the admin interface at `http://localhost:8000/admin/` to:
+- View and manage scraping tasks
+- Browse scraped articles
+- Monitor system status
+
+## Configuration
+
+Key settings in `settings.py`:
+- `CELERY_BROKER_URL`: Redis connection for Celery
+- `ELASTICSEARCH_DSL`: Elasticsearch connection settings
+- `LOGGING`: Configure logging levels and outputs
+
+## Troubleshooting
+
+1. **Elasticsearch Connection Issues**
+   - Ensure Elasticsearch is running: `curl localhost:9200`
+   - Check credentials in settings
+
+2. **Celery Worker Not Processing Tasks**
+   - Verify Redis is running: `redis-cli ping`
+   - Check Celery worker logs
+
+3. **Scraping Failures**
+   - Check network connectivity
+   - Verify Prothom Alo site structure hasn't changed
+   - Review scraper logs
+
+## Production Deployment
+
+For production deployment:
+1. Use environment variables for sensitive settings
+2. Configure proper logging
+3. Set up monitoring and alerting
+4. Use production-grade message broker
+5. Implement proper error handling and retries
