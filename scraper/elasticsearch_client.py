@@ -18,8 +18,10 @@ class ElasticsearchClient:
         """Establish connection to Elasticsearch"""
         try:
             es_config = settings.ELASTICSEARCH_DSL['default']
+            
+            # Create client with explicit configuration
             self.client = Elasticsearch(
-                hosts=[es_config['hosts']],
+                [es_config['hosts']],  # Pass as list
                 basic_auth=es_config['basic_auth'],
                 verify_certs=es_config['verify_certs'],
                 request_timeout=30,
@@ -27,14 +29,21 @@ class ElasticsearchClient:
                 retry_on_timeout=True
             )
             
-            # Test connection with more detailed info
-            info = self.client.info()
-            logger.info(f"Successfully connected to Elasticsearch: {info['version']['number']}")
-            self.create_index_if_not_exists()
+            # Test connection
+            if self.client.ping():
+                info = self.client.info()
+                logger.info(f"Successfully connected to Elasticsearch: {info['version']['number']}")
+                self.create_index_if_not_exists()
+                return True
+            else:
+                logger.error("Elasticsearch ping failed")
+                self.client = None
+                return False
                 
         except Exception as e:
             logger.error(f"Failed to connect to Elasticsearch: {e}")
             self.client = None
+            return False
     
     def is_connected(self):
         """Check if Elasticsearch is connected and available"""
@@ -42,7 +51,8 @@ class ElasticsearchClient:
             if self.client is None:
                 return False
             return self.client.ping()
-        except:
+        except Exception as e:
+            logger.error(f"Connection check failed: {e}")
             return False
     
     def create_index_if_not_exists(self):
@@ -55,7 +65,7 @@ class ElasticsearchClient:
             index_mapping = {
                 "settings": {
                     "number_of_shards": 1,
-                    "number_of_replicas": 1,
+                    "number_of_replicas": 0,  # Reduced for single node
                     "analysis": {
                         "analyzer": {
                             "bengali_analyzer": {
@@ -100,8 +110,10 @@ class ElasticsearchClient:
     def bulk_index_articles(self, articles):
         """Bulk index articles to Elasticsearch"""
         if not self.is_connected():
-            logger.error("Elasticsearch is not connected")
-            return 0
+            logger.error("Elasticsearch is not connected - attempting to reconnect...")
+            if not self.connect():
+                logger.error("Failed to reconnect to Elasticsearch")
+                return 0
         
         if not articles:
             logger.warning("No articles to index")
@@ -113,6 +125,7 @@ class ElasticsearchClient:
             
             actions = []
             for article in articles:
+                # Use URL as document ID to prevent duplicates
                 doc_id = quote(article['url'], safe='')
                 action = {
                     "_index": self.index_name,
@@ -123,24 +136,37 @@ class ElasticsearchClient:
             
             logger.info(f"Attempting to bulk index {len(actions)} articles...")
             
-            success, failed = bulk(
-                self.client,
-                actions,
-                chunk_size=100,
-                request_timeout=60,
-                raise_on_error=False
-            )
+            # Use bulk helper with error handling
+            success_count = 0
+            failed_count = 0
             
-            logger.info(f"Successfully indexed {success} articles to Elasticsearch")
-            if failed:
-                logger.error(f"Failed to index {len(failed)} articles")
-                for failure in failed[:3]:  # Log first 3 failures for debugging
-                    logger.error(f"Index failure: {failure}")
-            
-            return success
+            try:
+                for success, info in bulk(
+                    self.client,
+                    actions,
+                    chunk_size=50,  # Smaller chunks for reliability
+                    request_timeout=60,
+                    raise_on_error=False,
+                    raise_on_exception=False
+                ):
+                    if success:
+                        success_count += 1
+                    else:
+                        failed_count += 1
+                        logger.error(f"Failed to index document: {info}")
+                
+                logger.info(f"Successfully indexed {success_count} articles")
+                if failed_count > 0:
+                    logger.error(f"Failed to index {failed_count} articles")
+                
+                return success_count
+                
+            except Exception as bulk_error:
+                logger.error(f"Bulk operation failed: {bulk_error}")
+                return 0
             
         except Exception as e:
-            logger.error(f"Bulk indexing failed: {e}")
+            logger.error(f"Bulk indexing preparation failed: {e}")
             return 0
     
     def search_articles(self, query=None, category=None, size=20, from_=0):
@@ -192,6 +218,10 @@ class ElasticsearchClient:
         try:
             if not self.is_connected():
                 return {"error": "Not connected to Elasticsearch"}
+            
+            # Check if index exists first
+            if not self.client.indices.exists(index=self.index_name):
+                return {"document_count": 0, "size_bytes": 0, "index_exists": False}
             
             stats = self.client.indices.stats(index=self.index_name)
             doc_count = stats['indices'][self.index_name]['total']['docs']['count']

@@ -6,6 +6,7 @@ from .prothomalo_scraper_service import ProthomAloScraperService
 from .elasticsearch_client import es_client
 from django.utils import timezone
 from datetime import datetime
+import time
 
 logger = get_task_logger(__name__)
 
@@ -43,17 +44,23 @@ def scrape_prothomalo_articles(self, category, max_pages=2):
         }
     
     try:
-        # Check Elasticsearch connection first
+        # Wait a moment for Elasticsearch to be ready
+        time.sleep(2)
+        
+        # Check and establish Elasticsearch connection
+        logger.info("Checking Elasticsearch connection...")
         if not es_client.is_connected():
-            logger.error("Elasticsearch is not connected - attempting to reconnect...")
-            es_client.connect()
-            if not es_client.is_connected():
+            logger.warning("Elasticsearch not connected - attempting to connect...")
+            if not es_client.connect():
                 raise Exception("Could not establish Elasticsearch connection")
+        
+        logger.info("Elasticsearch connection confirmed")
         
         # Initialize scraper
         scraper = ProthomAloScraperService(category=category)
         
         # Perform scraping
+        logger.info(f"Starting scraping process for category: {category}")
         scraping_results = scraper.scrape_articles(max_pages)
         
         if not scraping_results['success']:
@@ -77,6 +84,8 @@ def scrape_prothomalo_articles(self, category, max_pages=2):
         articles_saved = 0
         articles_for_es = []
         
+        logger.info(f"Processing {len(scraping_results['articles'])} scraped articles...")
+        
         for article_data in scraping_results['articles']:
             try:
                 # Parse published_at
@@ -90,7 +99,7 @@ def scrape_prothomalo_articles(self, category, max_pages=2):
                     except ValueError:
                         logger.warning(f"Invalid date format: {article_data['published_at']}")
                 
-                # Save to Django database with content
+                # Save to Django database
                 article, created = Article.objects.get_or_create(
                     url=article_data['url'],
                     defaults={
@@ -98,7 +107,7 @@ def scrape_prothomalo_articles(self, category, max_pages=2):
                         'author': article_data['author'],
                         'location': article_data['location'],
                         'published_at': published_at,
-                        'content': article_data.get('content', ''),  # Include content
+                        'content': article_data.get('content', ''),
                         'word_count': article_data['word_count'],
                         'category': category,
                         'elasticsearch_indexed': False
@@ -107,7 +116,7 @@ def scrape_prothomalo_articles(self, category, max_pages=2):
                 
                 if created:
                     articles_saved += 1
-                    articles_for_es.append(article_data)  # Add to ES indexing list
+                    articles_for_es.append(article_data)
                     logger.info(f"Saved new article: {article_data['headline'][:50]}...")
                 else:
                     logger.info(f"Article already exists: {article_data['headline'][:50]}...")
@@ -119,16 +128,21 @@ def scrape_prothomalo_articles(self, category, max_pages=2):
         articles_indexed = 0
         if articles_for_es:
             logger.info(f"Attempting to index {len(articles_for_es)} new articles to Elasticsearch...")
-            articles_indexed = es_client.bulk_index_articles(articles_for_es)
             
-            if articles_indexed > 0:
-                # Update Django records to mark as indexed
-                Article.objects.filter(
-                    url__in=[a['url'] for a in articles_for_es]
-                ).update(elasticsearch_indexed=True)
-                logger.info(f"Marked {articles_indexed} articles as indexed in Django")
+            # Ensure connection before indexing
+            if es_client.is_connected():
+                articles_indexed = es_client.bulk_index_articles(articles_for_es)
+                
+                if articles_indexed > 0:
+                    # Update Django records to mark as indexed
+                    Article.objects.filter(
+                        url__in=[a['url'] for a in articles_for_es]
+                    ).update(elasticsearch_indexed=True)
+                    logger.info(f"Marked {articles_indexed} articles as indexed in Django")
+                else:
+                    logger.error("Failed to index any articles to Elasticsearch")
             else:
-                logger.error("Failed to index any articles to Elasticsearch")
+                logger.error("Elasticsearch connection lost - skipping indexing")
         
         # Update final task status
         task_record.articles_indexed = articles_indexed
