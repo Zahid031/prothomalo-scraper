@@ -41,6 +41,7 @@ class Article(models.Model):
     location = models.CharField(max_length=255, blank=True)
     published_at = models.DateTimeField(null=True, blank=True)
     scraped_at = models.DateTimeField(default=timezone.now)
+    content = models.TextField(blank=True)  # Added content field
     word_count = models.IntegerField(default=0)
     category = models.CharField(max_length=100, db_index=True)
     elasticsearch_indexed = models.BooleanField(default=False)

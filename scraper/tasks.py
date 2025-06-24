@@ -43,6 +43,13 @@ def scrape_prothomalo_articles(self, category, max_pages=2):
         }
     
     try:
+        # Check Elasticsearch connection first
+        if not es_client.is_connected():
+            logger.error("Elasticsearch is not connected - attempting to reconnect...")
+            es_client.connect()
+            if not es_client.is_connected():
+                raise Exception("Could not establish Elasticsearch connection")
+        
         # Initialize scraper
         scraper = ProthomAloScraperService(category=category)
         
@@ -66,13 +73,13 @@ def scrape_prothomalo_articles(self, category, max_pages=2):
         task_record.articles_scraped = scraping_results['articles_scraped']
         task_record.save()
         
-        # Save articles to Django database and index to Elasticsearch
-        articles_indexed = 0
+        # Save articles to Django database and prepare for Elasticsearch
         articles_saved = 0
+        articles_for_es = []
         
         for article_data in scraping_results['articles']:
             try:
-                # Save to Django database
+                # Parse published_at
                 published_at = None
                 if article_data.get('published_at'):
                     try:
@@ -83,6 +90,7 @@ def scrape_prothomalo_articles(self, category, max_pages=2):
                     except ValueError:
                         logger.warning(f"Invalid date format: {article_data['published_at']}")
                 
+                # Save to Django database with content
                 article, created = Article.objects.get_or_create(
                     url=article_data['url'],
                     defaults={
@@ -90,6 +98,7 @@ def scrape_prothomalo_articles(self, category, max_pages=2):
                         'author': article_data['author'],
                         'location': article_data['location'],
                         'published_at': published_at,
+                        'content': article_data.get('content', ''),  # Include content
                         'word_count': article_data['word_count'],
                         'category': category,
                         'elasticsearch_indexed': False
@@ -98,6 +107,7 @@ def scrape_prothomalo_articles(self, category, max_pages=2):
                 
                 if created:
                     articles_saved += 1
+                    articles_for_es.append(article_data)  # Add to ES indexing list
                     logger.info(f"Saved new article: {article_data['headline'][:50]}...")
                 else:
                     logger.info(f"Article already exists: {article_data['headline'][:50]}...")
@@ -106,21 +116,29 @@ def scrape_prothomalo_articles(self, category, max_pages=2):
                 logger.error(f"Failed to save article {article_data['url']}: {e}")
         
         # Bulk index to Elasticsearch
-        if scraping_results['articles']:
-            indexed_count = es_client.bulk_index_articles(scraping_results['articles'])
-            if indexed_count:
-                articles_indexed = indexed_count
-                
+        articles_indexed = 0
+        if articles_for_es:
+            logger.info(f"Attempting to index {len(articles_for_es)} new articles to Elasticsearch...")
+            articles_indexed = es_client.bulk_index_articles(articles_for_es)
+            
+            if articles_indexed > 0:
                 # Update Django records to mark as indexed
                 Article.objects.filter(
-                    url__in=[a['url'] for a in scraping_results['articles']]
+                    url__in=[a['url'] for a in articles_for_es]
                 ).update(elasticsearch_indexed=True)
+                logger.info(f"Marked {articles_indexed} articles as indexed in Django")
+            else:
+                logger.error("Failed to index any articles to Elasticsearch")
         
         # Update final task status
         task_record.articles_indexed = articles_indexed
         task_record.status = 'SUCCESS'
         task_record.completed_at = timezone.now()
         task_record.save()
+        
+        # Get index stats for verification
+        index_stats = es_client.get_index_stats()
+        logger.info(f"Elasticsearch index stats: {index_stats}")
         
         result = {
             'success': True,
@@ -130,6 +148,7 @@ def scrape_prothomalo_articles(self, category, max_pages=2):
             'articles_scraped': scraping_results['articles_scraped'],
             'articles_saved_to_db': articles_saved,
             'articles_indexed_to_es': articles_indexed,
+            'elasticsearch_stats': index_stats,
             'message': f'Successfully scraped {articles_saved} new articles for category "{category}"'
         }
         
