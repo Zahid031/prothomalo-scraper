@@ -1,0 +1,9 @@
+Django
+djangorestframework
+celery
+redis
+elasticsearch
+requests
+beautifulsoup4
+python-dotenv
+django-cors-headers
