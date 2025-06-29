@@ -1,4 +1,6 @@
-# scraper/es_client.py
+# Updated version: unified index for all categories
+# Filename: scraper/es_client.py
+
 from elasticsearch import Elasticsearch
 from django.conf import settings
 import logging
@@ -6,12 +8,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 class ElasticsearchClient:
+    INDEX_NAME = "prothomalo_articles"
+
     def __init__(self):
         self.client = None
         self.connect()
-    
+
     def connect(self):
-        """Connect to Elasticsearch"""
         try:
             self.client = Elasticsearch(
                 hosts=[settings.ELASTICSEARCH_HOST],
@@ -24,18 +27,11 @@ class ElasticsearchClient:
                 logger.error("Failed to ping Elasticsearch")
         except Exception as e:
             logger.error(f"Elasticsearch connection error: {e}")
-    
-    def get_index_name(self, category):
-        """Get index name for category"""
-        return f"prothomalo_{category.replace('-', '_')}"
-    
-    def create_index_if_not_exists(self, category):
-        """Create index with mapping if it doesn't exist"""
-        index_name = self.get_index_name(category)
-        
-        if self.client.indices.exists(index=index_name):
+
+    def create_index_if_not_exists(self):
+        if self.client.indices.exists(index=self.INDEX_NAME):
             return True
-        
+
         mapping = {
             "settings": {
                 "number_of_shards": 1,
@@ -67,29 +63,25 @@ class ElasticsearchClient:
                 }
             }
         }
-        
+
         try:
-            self.client.indices.create(index=index_name, body=mapping)
+            self.client.indices.create(index=self.INDEX_NAME, body=mapping)
             return True
         except Exception as e:
-            logger.error(f"Failed to create index {index_name}: {e}")
+            logger.error(f"Failed to create index {self.INDEX_NAME}: {e}")
             return False
-    
-    def search_articles(self, category, query=None, page=1, size=20, filters=None):
-        """Search articles with filters"""
-        index_name = self.get_index_name(category)
-        
-        if not self.client.indices.exists(index=index_name):
+
+    def search_articles(self, query=None, page=1, size=20, filters=None):
+        if not self.client.indices.exists(index=self.INDEX_NAME):
             return {"hits": {"hits": [], "total": {"value": 0}}}
-        
+
         body = {
             "query": {"bool": {"must": [], "filter": []}},
             "sort": [{"published_at": {"order": "desc"}}],
             "from": (page - 1) * size,
             "size": size
         }
-        
-        # Add search query
+
         if query:
             body["query"]["bool"]["must"].append({
                 "multi_match": {
@@ -99,45 +91,36 @@ class ElasticsearchClient:
             })
         else:
             body["query"]["bool"]["must"].append({"match_all": {}})
-        
-        # Add filters
+
         if filters:
             if filters.get('author'):
-                body["query"]["bool"]["filter"].append({
-                    "term": {"author.keyword": filters['author']}
-                })
-            
+                body["query"]["bool"]["filter"].append({"term": {"author.keyword": filters['author']}})
             if filters.get('location'):
-                body["query"]["bool"]["filter"].append({
-                    "term": {"location": filters['location']}
-                })
-            
+                body["query"]["bool"]["filter"].append({"term": {"location": filters['location']}})
+            if filters.get('category'):
+                body["query"]["bool"]["filter"].append({"term": {"category": filters['category']}})
             if filters.get('date_from'):
-                body["query"]["bool"]["filter"].append({
-                    "range": {"published_at": {"gte": filters['date_from']}}
-                })
-            
+                body["query"]["bool"]["filter"].append({"range": {"published_at": {"gte": filters['date_from']}}})
             if filters.get('date_to'):
-                body["query"]["bool"]["filter"].append({
-                    "range": {"published_at": {"lte": filters['date_to']}}
-                })
-        
+                body["query"]["bool"]["filter"].append({"range": {"published_at": {"lte": filters['date_to']}}})
+
         try:
-            result = self.client.search(index=index_name, body=body)
+            result = self.client.search(index=self.INDEX_NAME, body=body)
             return result
         except Exception as e:
             logger.error(f"Search error: {e}")
             return {"hits": {"hits": [], "total": {"value": 0}}}
-    
-    def get_article_stats(self, category):
-        """Get basic statistics for a category"""
-        index_name = self.get_index_name(category)
-        
-        if not self.client.indices.exists(index=index_name):
+
+    def get_article_stats(self, category=None):
+        if not self.client.indices.exists(index=self.INDEX_NAME):
             return {"total_articles": 0}
-        
+
+        body = {"query": {"match_all": {}}}
+        if category:
+            body = {"query": {"term": {"category": category}}}
+
         try:
-            result = self.client.count(index=index_name)
+            result = self.client.count(index=self.INDEX_NAME, body=body)
             return {"total_articles": result["count"]}
         except Exception as e:
             logger.error(f"Stats error: {e}")
