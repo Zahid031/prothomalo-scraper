@@ -1,19 +1,21 @@
-# Updated views.py to add /api/articles/ endpoint to return all articles
-# Filename: scraper/views.py
-
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django.shortcuts import get_object_or_404
+from django.http import HttpResponse
 import uuid
 import logging
+import boto3
+from botocore.exceptions import ClientError
+from django.conf import settings
 from .models import ScrapingTask
 from .serializers import (
     ScrapingTaskSerializer, 
     StartScrapingSerializer, 
     ArticleSearchSerializer,
-    ArticleSerializer
+    ArticleSerializer,
+    S3DownloadSerializer
 )
 from .tasks import scrape_category_task
 from .es_client import es_client
@@ -159,12 +161,70 @@ def available_categories(request):
     logger.debug("Returning available categories list")
     return Response({'categories': categories})
 
-# Add this in tasks.py after parsing articles
-# Inside run_scraping_pipeline()
-# logger.debug(f"Found {len(article_urls)} URLs to scrape")
-# logger.debug(f"Scraped {len(scraped_articles)} valid articles")
+@api_view(['GET'])
+def download_s3_data(request, task_id):
+    """Generate a pre-signed URL for downloading S3 data"""
+    task = get_object_or_404(ScrapingTask, task_id=task_id)
+    
+    if not task.s3_key:
+        return Response(
+            {'error': 'No S3 backup available for this task'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    try:
+        # Create S3 client
+        s3_client = boto3.client(
+            's3',
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=getattr(settings, 'AWS_S3_REGION_NAME', 'us-east-1')
+        )
+        
+        # Generate pre-signed URL (valid for 1 hour)
+        presigned_url = s3_client.generate_presigned_url(
+            'get_object',
+            Params={
+                'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
+                'Key': task.s3_key
+            },
+            ExpiresIn=3600  # 1 hour
+        )
+        
+        logger.info(f"Generated pre-signed URL for task {task_id}")
+        return Response({
+            'download_url': presigned_url,
+            'expires_in': 3600,
+            'filename': f'{task_id}.zip',
+            'task_info': {
+                'task_id': task.task_id,
+                'category': task.category,
+                'scraped_articles': task.scraped_articles,
+                'created_at': task.created_at,
+                's3_uploaded_at': task.s3_uploaded_at
+            }
+        })
+        
+    except ClientError as e:
+        logger.error(f"Failed to generate pre-signed URL: {e}")
+        return Response(
+            {'error': 'Failed to generate download URL'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
-# # Inside bulk_index_articles()
-# logger.debug(f"Index name: {es_client.INDEX_NAME}")
-# logger.debug(f"Indexing {len(articles)} documents")
-# logger.debug(f"Example document: {articles[0] if articles else 'No articles'}")
+@api_view(['GET'])
+def s3_backup_status(request):
+    """Get status of S3 backups for all tasks"""
+    tasks_with_s3 = ScrapingTask.objects.filter(s3_url__isnull=False).order_by('-created_at')
+    tasks_without_s3 = ScrapingTask.objects.filter(
+        status='SUCCESS', 
+        s3_url__isnull=True
+    ).order_by('-created_at')
+    
+    return Response({
+        'total_tasks': ScrapingTask.objects.count(),
+        'tasks_with_s3_backup': tasks_with_s3.count(),
+        'tasks_without_s3_backup': tasks_without_s3.count(),
+        'recent_s3_backups': ScrapingTaskSerializer(tasks_with_s3[:10], many=True).data,
+        'failed_s3_backups': ScrapingTaskSerializer(tasks_without_s3[:10], many=True).data
+    })

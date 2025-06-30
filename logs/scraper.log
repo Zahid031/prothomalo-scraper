@@ -1,0 +1,36 @@
+Connected to Elasticsearch
+Connected to Elasticsearch
+Connected to Elasticsearch
+Connected to Elasticsearch
+Connected to Elasticsearch
+Connected to Elasticsearch
+Connected to Elasticsearch
+Connected to Elasticsearch
+Connected to Elasticsearch
+Connected to Elasticsearch
+Connected to Elasticsearch
+Connected to Elasticsearch
+Connected to Elasticsearch
+Starting scraping task: b145d2c1-950a-4c36-a6b4-2ff5a08b4c36 for category: politics
+[Task b145d2c1-950a-4c36-a6b4-2ff5a08b4c36] Starting scrape for category: politics
+Collected 24 article URLs from API
+Indexed 24 articles to unified index
+Successfully uploaded zip file to S3: https://first-s3bucket03.s3.amazonaws.com/scraped-data/politics/2025/06/30/b145d2c1-950a-4c36-a6b4-2ff5a08b4c36.zip
+Articles saved to S3: https://first-s3bucket03.s3.amazonaws.com/scraped-data/politics/2025/06/30/b145d2c1-950a-4c36-a6b4-2ff5a08b4c36.zip
+[Task b145d2c1-950a-4c36-a6b4-2ff5a08b4c36] Completed with status: SUCCESS
+Fetching all articles from Elasticsearch
+Search error: BadRequestError(400, 'search_phase_execution_exception', 'Fielddata is disabled on [published_at] in [prothomalo_articles]. Text fields are not optimised for operations that require per-document field data like aggregations and sorting, so these operations are disabled by default. Please use a keyword field instead. Alternatively, set fielddata=true on [published_at] in order to load field data by uninverting the inverted index. Note that this can use significant memory.', Fielddata is disabled on [published_at] in [prothomalo_articles]. Text fields are not optimised for operations that require per-document field data like aggregations and sorting, so these operations are disabled by default. Please use a keyword field instead. Alternatively, set fielddata=true on [published_at] in order to load field data by uninverting the inverted index. Note that this can use significant memory.)
+Connected to Elasticsearch
+Connected to Elasticsearch
+Connected to Elasticsearch
+Starting scraping task: e7b404e4-99f6-44b5-8e95-02c85f7304b6 for category: business-all
+[Task e7b404e4-99f6-44b5-8e95-02c85f7304b6] Starting scrape for category: business-all
+Collected 24 article URLs from API
+Indexed 24 articles to unified index
+Successfully uploaded zip file to S3: https://first-s3bucket03.s3.amazonaws.com/scraped-data/business-all/2025/06/30/e7b404e4-99f6-44b5-8e95-02c85f7304b6.zip
+Articles saved to S3: https://first-s3bucket03.s3.amazonaws.com/scraped-data/business-all/2025/06/30/e7b404e4-99f6-44b5-8e95-02c85f7304b6.zip
+[Task e7b404e4-99f6-44b5-8e95-02c85f7304b6] Completed with status: SUCCESS
+Connected to Elasticsearch
+Connected to Elasticsearch
+Connected to Elasticsearch
+Connected to Elasticsearch

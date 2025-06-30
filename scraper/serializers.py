@@ -1,4 +1,3 @@
-# scraper/serializers.py
 from rest_framework import serializers
 from .models import ScrapingTask
 
@@ -32,3 +31,7 @@ class ArticleSerializer(serializers.Serializer):
     scraped_at = serializers.CharField()
     word_count = serializers.IntegerField()
     category = serializers.CharField()
+
+class S3DownloadSerializer(serializers.Serializer):
+    """Serializer for S3 download requests"""
+    task_id = serializers.CharField()

@@ -1,5 +1,4 @@
-# Updated version: unified index for all categories
-# Filename: scraper/es_client.py
+
 
 from elasticsearch import Elasticsearch
 from django.conf import settings
