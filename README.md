@@ -29,7 +29,7 @@ This project is a Django-based web scraper and RESTful API for fetching and sear
 
 Follow these steps to set up and run the project:
 
-## 1. Run Elasticsearch
+1. **Run Elasticsearch**
 
 Open your terminal and run the following command to start Elasticsearch using Docker:
 
@@ -39,7 +39,7 @@ curl -fsSL https://elastic.co/start-local | sh
 
 2.  **Clone the repository:**
     ```bash
-    git clone <repository-url>
+    git clone git@github.com:Zahid031/prothomalo-scraper.git
     cd prothomalo-api
     ```
 
