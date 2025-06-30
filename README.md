@@ -1,4 +1,4 @@
-# Prothomalo Newspaper Scraper & API
+# Prothomalo Newspaper Scraper & API (Beautifulsoup4+Requests+Elasticsearch)
 
 This project is a Django-based web scraper and RESTful API for fetching and searching news articles from the Prothomalo newspaper website. It uses Celery for asynchronous task management, Elasticsearch for storing and searching articles, and provides an S3 backup solution for the scraped data.
 
@@ -22,24 +22,39 @@ This project is a Django-based web scraper and RESTful API for fetching and sear
 
 ## Setup and Installation
 
-1.  **Clone the repository:**
+## Prerequisites
+
+*   **Docker:** Ensure you have Docker installed and running on your system. You can download it from [https://www.docker.com/get-started](https://www.docker.com/get-started).
+
+
+Follow these steps to set up and run the project:
+
+## 1. Run Elasticsearch
+
+Open your terminal and run the following command to start Elasticsearch using Docker:
+
+```bash
+curl -fsSL https://elastic.co/start-local | sh
+```
+
+2.  **Clone the repository:**
     ```bash
     git clone <repository-url>
     cd prothomalo-api
     ```
 
-2.  **Create a virtual environment and activate it:**
+3.  **Create a virtual environment and activate it:**
     ```bash
     python -m venv venv
     source venv/bin/activate
     ```
 
-3.  **Install the dependencies:**
+4.  **Install the dependencies:**
     ```bash
     pip install -r requirements.txt
     ```
 
-4.  **Set up environment variables:**
+5.  **Set up environment variables:**
     Create a `.env` file in the project root and add the following variables:
     ```
     REDIS_URL=redis://localhost:6379/0
@@ -52,7 +67,7 @@ This project is a Django-based web scraper and RESTful API for fetching and sear
     AWS_S3_REGION_NAME=<your-s3-bucket-region>
     ```
 
-5.  **Run database migrations:**
+6.  **Run database migrations:**
     ```bash
     python manage.py migrate
     ```
