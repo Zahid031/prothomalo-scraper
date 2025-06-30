@@ -1,0 +1,55 @@
+version: '3.9'
+
+services:
+  app:
+    build: .
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+      - elasticsearch
+    env_file:
+      - .env
+
+  celery:
+    build: .
+    command: celery -A prothomalo_api.celery_app worker -l info
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - app
+    env_file:
+      - .env
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.0.2
+    container_name: es-local
+    environment:
+      - discovery.type=single-node
+      - ELASTIC_USERNAME=${ELASTICSEARCH_USER}
+      - ELASTIC_PASSWORD=${ELASTICSEARCH_PASSWORD}
+      - xpack.security.enabled=true
+      - xpack.security.authc.api_key.enabled=true
+      - "ES_JAVA_OPTS=-Xms128m -Xmx2g"
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    env_file:
+      - .env
+
+volumes:
+  esdata:
