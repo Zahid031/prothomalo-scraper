@@ -27,7 +27,16 @@ This project is a Django-based web scraper and RESTful API for fetching and sear
 *   **Docker:** Ensure you have Docker installed and running on your system. You can download it from [https://www.docker.com/get-started](https://www.docker.com/get-started).
 
 
-Follow these steps to set up and run the project:
+ **Clone the repository:**
+    ```bash
+    git clone git@github.com:Zahid031/prothomalo-scraper.git
+    cd prothomalo-api
+
+    docker compose up --build 
+    ```
+
+
+Follow these steps to set up and run the project manually.....
 
 1. **Run Elasticsearch**
 
