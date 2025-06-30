@@ -6,4 +6,6 @@ __pycache__/
 *.pyo
 *.pyd
 
-    
+logs/
+*.log
+*.sqlite3
