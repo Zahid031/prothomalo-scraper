@@ -1,4 +1,4 @@
-# Prothomalo Newspaper Scraper & API (Beautifulsoup4+Requests+Elasticsearch)
+# Prothomalo Newspaper Scraper & API (Beautifulsoup4+Requests+Elasticsearch+AWS S3)
 
 This project is a Django-based web scraper and RESTful API for fetching and searching news articles from the Prothomalo newspaper website. It uses Celery for asynchronous task management, Elasticsearch for storing and searching articles, and provides an S3 backup solution for the scraped data.
 
