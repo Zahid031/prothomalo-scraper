@@ -7,11 +7,11 @@ export default defineConfig({
 server: {
   host: '0.0.0.0',
   port: 5173,
-  proxy: {
-    '/api': {
-      target: 'http://app:8000',
-      changeOrigin: true,
-    }
-  }
+  // proxy: {
+  //   '/api': {
+  //     target: 'http://app:8000',
+  //     changeOrigin: true,
+  //   }
+  // }
 }
 })
