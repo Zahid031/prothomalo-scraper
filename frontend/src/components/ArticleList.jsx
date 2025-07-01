@@ -2,7 +2,7 @@ import React from 'react';
 
 const ArticleList = ({ articles, loading, error, page, totalPages, setPage }) => {
   return (
-    <div className="container-fluid mt-4">
+    <div className="mt-4">
       <h2>Articles</h2>
       {loading && <p>Loading...</p>}
       {error && <p className="text-danger">{error}</p>}

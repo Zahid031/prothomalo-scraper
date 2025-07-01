@@ -40,7 +40,7 @@ const StartScrapingForm = ({ onTaskStarted }) => {
   };
 
   return (
-    <div className="container-fluid mt-4">
+    <div className="mt-4">
       <h2>Start New Scraping Task</h2>
       <form onSubmit={handleSubmit}>
         <div className="row">

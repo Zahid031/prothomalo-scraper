@@ -56,9 +56,9 @@ function App() {
   }
   
   return (
-    <div className="App">
+    <div className="">
       <nav className="navbar navbar-dark bg-dark">
-        <div className="container-fluid">
+        <div className="">
           <span className="navbar-brand mb-0 h1">Prothom Alo Scraper</span>
         </div>
       </nav>
