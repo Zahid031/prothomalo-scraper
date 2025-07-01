@@ -14,6 +14,10 @@ const ArticleList = ({ articles, loading, error, page, totalPages, setPage }) =>
             <p className="mb-1"><strong>Location:</strong> {article.location}</p>
             <p className="mb-1"><strong>Published:</strong> {new Date(article.published_at).toLocaleString()}</p>
             <p className="mb-1"><strong>Category:</strong> {article.category}</p>
+            <p className='mb-1'>
+  <strong>Content:</strong> {article.content.slice(0, 300)}...
+</p>
+
           </li>
         ))}
       </ul>
