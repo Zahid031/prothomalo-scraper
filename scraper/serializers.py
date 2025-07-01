@@ -12,7 +12,7 @@ class StartScrapingSerializer(serializers.Serializer):
     max_pages = serializers.IntegerField(min_value=1, max_value=10, default=2)
 
 class ArticleSearchSerializer(serializers.Serializer):
-    category = serializers.ChoiceField(choices=ScrapingTask.CATEGORY_CHOICES)
+    category = serializers.ChoiceField(choices=ScrapingTask.CATEGORY_CHOICES, required=False)
     query = serializers.CharField(required=False, allow_blank=True)
     page = serializers.IntegerField(min_value=1, default=1)
     size = serializers.IntegerField(min_value=1, max_value=100, default=20)

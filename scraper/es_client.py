@@ -1,5 +1,4 @@
 
-
 from elasticsearch import Elasticsearch
 from django.conf import settings
 import logging
@@ -93,7 +92,7 @@ class ElasticsearchClient:
 
         if filters:
             if filters.get('author'):
-                body["query"]["bool"]["filter"].append({"term": {"author.keyword": filters['author']}})
+                body["query"]["bool"]["filter"].append({"match": {"author": filters['author']}})
             if filters.get('location'):
                 body["query"]["bool"]["filter"].append({"term": {"location": filters['location']}})
             if filters.get('category'):

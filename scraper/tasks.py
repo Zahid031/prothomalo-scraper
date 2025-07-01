@@ -59,7 +59,6 @@ class S3Handler:
     def upload_to_s3(self, zip_buffer, task_id, category):
         """Upload the zip file to S3"""
         try:
-            # Create S3 key with organized structure
             timestamp = datetime.now().strftime('%Y/%m/%d')
             s3_key = f'scraped-data/{category}/{timestamp}/{task_id}.zip'
             
@@ -92,7 +91,6 @@ class S3Handler:
             return None, None
         
         try:
-            # Create zip file
             zip_buffer = self.create_zip_file(articles, task_id, category)
             
             # Upload to S3
