@@ -1,9 +1,10 @@
-# Prothomalo Newspaper Scraper & API (Beautifulsoup4+Requests+Elasticsearch+AWS S3)
+# Prothomalo Newspaper Scraper & API (Beautifulsoup4+Requests+Elasticsearch+AWS S3+React)
 
-This project is a Django-based web scraper and RESTful API for fetching and searching news articles from the Prothomalo newspaper website. It uses Celery for asynchronous task management, Elasticsearch for storing and searching articles, and provides an S3 backup solution for the scraped data.
+This project is a full-stack application featuring a Django-based web scraper and RESTful API, complemented by a React frontend. It fetches and searches news articles from the Prothomalo newspaper website, using Celery for asynchronous task management, Elasticsearch for article storage and search, and provides an S3 backup solution for scraped data.
 
 ## Features
 
+*   **React Frontend:** A user-friendly interface to interact with the scraper, view tasks, and search articles.
 *   **Web Scraper:** Scrapes news articles from different categories of the Prothomalo website.
 *   **RESTful API:** Provides endpoints to start scraping tasks, check task status, and search for articles.
 *   **Asynchronous Task Processing:** Uses Celery with Redis to handle long-running scraping tasks in the background.
@@ -14,60 +15,32 @@ This project is a Django-based web scraper and RESTful API for fetching and sear
 ## Technologies Used
 
 *   **Backend:** Django, Django REST Framework
+*   **Frontend:** React, Vite
 *   **Web Scraping:** `requests`, `BeautifulSoup4`
 *   **Asynchronous Tasks:** `Celery`, `Redis`
 *   **Database:** `SQLite` (for task management), `Elasticsearch` (for article storage and search)
 *   **API Documentation:** `drf-spectacular` for generating OpenAPI 3 schema.
-*   **Deployment:** `python-dotenv` for managing environment variables.
+*   **Deployment:** `Docker`, `docker-compose`, `python-dotenv` for managing environment variables.
 
 ## Setup and Installation
 
-## Prerequisites
+### Prerequisites
 
 *   **Docker:** Ensure you have Docker installed and running on your system. You can download it from [https://www.docker.com/get-started](https://www.docker.com/get-started).
 
+### Running the Application with Docker
 
- **Clone the repository:**
-```bash
-    git clone git@github.com:Zahid031/prothomalo-scraper.git
-    cd prothomalo-api
-
-    docker compose up --build 
-```
-
-
-Follow these steps to set up and run the project manually.....
-
-1. **Run Elasticsearch**
-
-Open your terminal and run the following command to start Elasticsearch using Docker:
-
-```bash
-curl -fsSL https://elastic.co/start-local | sh
-```
-
-2.  **Clone the repository:**
+1.  **Clone the repository:**
     ```bash
     git clone git@github.com:Zahid031/prothomalo-scraper.git
     cd prothomalo-api
     ```
 
-3.  **Create a virtual environment and activate it:**
-    ```bash
-    python -m venv venv
-    source venv/bin/activate
-    ```
-
-4.  **Install the dependencies:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-5.  **Set up environment variables:**
+2.  **Set up environment variables:**
     Create a `.env` file in the project root and add the following variables:
     ```
-    REDIS_URL=redis://localhost:6379/0
-    ELASTICSEARCH_HOST=http://localhost:9200
+    REDIS_URL=redis://redis:6379/0
+    ELASTICSEARCH_HOST=http://elasticsearch:9200
     ELASTICSEARCH_USER=elastic
     ELASTICSEARCH_PASSWORD=<your-password>
     AWS_ACCESS_KEY_ID=<your-aws-access-key-id>
@@ -76,18 +49,23 @@ curl -fsSL https://elastic.co/start-local | sh
     AWS_S3_REGION_NAME=<your-s3-bucket-region>
     ```
 
-6.  **Run database migrations:**
+3.  **Build and run the application using Docker Compose:**
     ```bash
-    python manage.py migrate
+    docker compose up --build
     ```
+
+    This command will build the Docker images for the frontend and backend services and start the containers.
+
+    *   The **React frontend** will be available at `http://localhost:5173`.
+    *   The **Django backend** will be available at `http://localhost:8000`.
 
 ## API Documentation
 
 The API documentation is automatically generated using `drf-spectacular`. Once the server is running, you can access the documentation at the following endpoints:
 
-*   **Swagger UI:** `http://127.0.0.1:8000/api/docs/`
-*   **ReDoc:** `http://127.0.0.1:8000/api/redoc/`
-*   **Schema:** `http://127.0.0.1:8000/api/schema/`
+*   **Swagger UI:** `http://localhost:8000/api/docs/`
+*   **ReDoc:** `http://localhost:8000/api/redoc/`
+*   **Schema:** `http://localhost:8000/api/schema/`
 
 ### API Endpoints
 
@@ -101,28 +79,12 @@ The API documentation is automatically generated using `drf-spectacular`. Once t
 *   `GET /api/tasks/<task_id>/download/`: Get a pre-signed URL to download the S3 backup for a task.
 *   `GET /api/s3/status/`: Get the status of S3 backups.
 
-## Running the Application
-
-1.  **Start the Django development server:**
-    ```bash
-    python manage.py runserver
-    ```
-
-2.  **Start the Celery worker:**
-    ```bash
-    celery -A prothomalo_api.celery_app worker -l info
-    ```
-
-3.  **Start the Celery beat scheduler (optional):**
-    ```bash
-    celery -A prothomalo_api.celery_app beat -l info
-    ```
-
-Now you can access the API at `http://127.0.0.1:8000/api/`.
-
 ## Future Improvements
 
-*   **Add a frontend:** A simple frontend could be added to provide a user-friendly interface for interacting with the scraper.
 *   **Add tests:** Unit and integration tests should be added to improve code quality and maintainability.
-*   **Containerization:** The application could be containerized using Docker for easier deployment.
 *   **CI/CD:** A CI/CD pipeline could be set up to automate testing and deployment.
+*   **Improve Frontend:** Enhance the user interface and add more features to the frontend.
+
+
+
+
